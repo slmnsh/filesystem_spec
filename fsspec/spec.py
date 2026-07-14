@@ -2082,7 +2082,7 @@ class AbstractBufferedFile(io.IOBase):
             self.offset = 0
             try:
                 self._initiate_upload()
-            except:
+            except Exception:
                 self.closed = True
                 raise
 
