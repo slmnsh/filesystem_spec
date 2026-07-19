@@ -4,9 +4,19 @@ import io
 import os
 from collections.abc import Callable, Generator
 from pathlib import Path
-from typing import IO, Any, ClassVar, Literal, Self, TypeAlias, TypedDict, overload
+from typing import (
+    IO,
+    Any,
+    ClassVar,
+    Literal,
+    Self,
+    TypeAlias,
+    TypedDict,
+    overload,
+    override,
+)
 
-from _typeshed import Incomplete, OpenBinaryMode, OpenTextMode
+from _typeshed import Incomplete, OpenBinaryMode, OpenTextMode, ReadableBuffer
 
 from fsspec.mapping import FSMap
 
@@ -23,18 +33,18 @@ from .utils import tokenize as tokenize
 
 logger: Incomplete
 
-TPath: TypeAlias = str | os.PathLike[str] | Path
+_TPath: TypeAlias = str | os.PathLike[str] | Path
 
-class FileInfo(TypedDict):
+class _FileInfo(TypedDict):
     name: str
     size: int | None
     type: Literal["file", "directory"] | str  # noqa: PYI051
 
-def make_instance(cls, args, kwargs: dict[str, Any]): ...
+def make_instance(cls: type, args: list[Any], kwargs: dict[str, Any]) -> type: ...
 
 class _Cached(type):
-    def __init__(cls, *args, **kwargs: Any) -> None: ...
-    def __call__(cls, *args, **kwargs: Any): ...
+    def __init__(cls, *args: Any, **kwargs: Any) -> None: ...
+    def __call__(cls, *args: Any, **kwargs: Any): ...
 
 class AbstractFileSystem(metaclass=_Cached):
     cachable: bool
@@ -64,22 +74,23 @@ class AbstractFileSystem(metaclass=_Cached):
     def end_transaction(self) -> None: ...
     def invalidate_cache(self, path: str | None = None) -> None: ...
     def mkdir(
-        self, path: TPath, create_parents: bool = True, **kwargs: Any
+        self, path: _TPath, create_parents: bool = True, **kwargs: Any
     ) -> None: ...
-    def makedirs(self, path: TPath, exist_ok: bool = False) -> None: ...
-    def rmdir(self, path: TPath) -> None: ...
+    def makedirs(self, path: _TPath, exist_ok: bool = False) -> None: ...
+    def rmdir(self, path: _TPath) -> None: ...
     @overload
     def ls(
-        self, path: TPath, detail: Literal[True], **kwargs: Any
-    ) -> list[FileInfo]: ...
+        self, path: _TPath, detail: Literal[True], **kwargs: Any
+    ) -> list[_FileInfo]: ...
     @overload
-    def ls(self, path: TPath, detail: Literal[False], **kwargs: Any) -> list[str]: ...
+    def ls(self, path: _TPath, detail: Literal[False], **kwargs: Any) -> list[str]: ...
+    @overload
     def ls(
-        self, path: TPath, detail: bool = True, **kwargs: Any
-    ) -> list[str] | list[FileInfo]: ...
+        self, path: _TPath, detail: bool = True, **kwargs: Any
+    ) -> list[str] | list[_FileInfo]: ...
     def walk(
         self,
-        path: TPath,
+        path: _TPath,
         maxdepth: int | None = None,
         topdown: bool = True,
         on_error: Literal["omit", "raise"] | Callable[[OSError], Any] = "omit",
@@ -88,33 +99,34 @@ class AbstractFileSystem(metaclass=_Cached):
     @overload
     def find(
         self,
-        path: TPath,
+        path: _TPath,
         maxdepth: int | None,
         withdirs: bool,
         detail: Literal[True],
         **kwargs: Any,
-    ) -> dict[str, FileInfo]: ...
+    ) -> dict[str, _FileInfo]: ...
     @overload
     def find(
         self,
-        path: TPath,
+        path: _TPath,
         maxdepth: int | None,
         withdirs: bool,
         detail: Literal[False],
         **kwargs: Any,
     ) -> list[str]: ...
+    @overload
     def find(
         self,
-        path: TPath,
+        path: _TPath,
         maxdepth: int | None = None,
         withdirs: bool = False,
         detail: bool = False,
         **kwargs: Any,
-    ) -> list[str] | dict[str, FileInfo]: ...
+    ) -> list[str] | dict[str, _FileInfo]: ...
     @overload
     def du(
         self,
-        path: TPath,
+        path: _TPath,
         total: Literal[True],
         maxdepth: int | None = None,
         withdirs: bool = False,
@@ -123,34 +135,35 @@ class AbstractFileSystem(metaclass=_Cached):
     @overload
     def du(
         self,
-        path: TPath,
+        path: _TPath,
         total: Literal[False],
         maxdepth: int | None = None,
         withdirs: bool = False,
         **kwargs: Any,
     ) -> dict[str, int]: ...
+    @overload
     def du(
         self,
-        path: TPath,
+        path: _TPath,
         total: bool = True,
         maxdepth: int | None = None,
         withdirs: bool = False,
         **kwargs: Any,
     ) -> int | dict[str, int]: ...
     def glob(
-        self, path: TPath, maxdepth: int | None = None, **kwargs: Any
-    ) -> list[str] | dict[str, FileInfo]: ...
-    def exists(self, path: TPath, **kwargs: Any) -> bool: ...
-    def lexists(self, path: TPath, **kwargs: Any) -> bool: ...
-    def info(self, path: TPath, **kwargs: Any) -> FileInfo: ...
-    def checksum(self, path: TPath) -> int: ...
-    def size(self, path: TPath) -> int | None: ...
-    def sizes(self, paths: list[TPath]) -> list[int | None]: ...
-    def isdir(self, path: TPath) -> bool: ...
-    def isfile(self, path: TPath) -> bool: ...
+        self, path: _TPath, maxdepth: int | None = None, **kwargs: Any
+    ) -> list[str] | dict[str, _FileInfo]: ...
+    def exists(self, path: _TPath, **kwargs: Any) -> bool: ...
+    def lexists(self, path: _TPath, **kwargs: Any) -> bool: ...
+    def info(self, path: _TPath, **kwargs: Any) -> _FileInfo: ...
+    def checksum(self, path: _TPath) -> int: ...
+    def size(self, path: _TPath) -> int | None: ...
+    def sizes(self, paths: list[_TPath]) -> list[int | None]: ...
+    def isdir(self, path: _TPath) -> bool: ...
+    def isfile(self, path: _TPath) -> bool: ...
     def read_text(
         self,
-        path: TPath,
+        path: _TPath,
         encoding: str | None = None,
         errors: str | None = None,
         newline: str | None = None,
@@ -158,7 +171,7 @@ class AbstractFileSystem(metaclass=_Cached):
     ) -> str | bytes: ...
     def write_text(
         self,
-        path: TPath,
+        path: _TPath,
         value: str,
         encoding: str | None = None,
         errors: str | None = None,
@@ -167,28 +180,28 @@ class AbstractFileSystem(metaclass=_Cached):
     ) -> int: ...
     def cat_file(
         self,
-        path: TPath,
+        path: _TPath,
         start: int | None = None,
         end: int | None = None,
         **kwargs: Any,
     ) -> str | bytes: ...
     def pipe_file(
         self,
-        path: TPath,
+        path: _TPath,
         value: bytes,
         mode: Literal["create", "overwrite"] = "overwrite",
         **kwargs: Any,
     ) -> None: ...
     def pipe(
         self,
-        path: TPath | dict[TPath, bytes],
+        path: _TPath | dict[_TPath, bytes],
         value: bytes | None = None,
         **kwargs: Any,
     ) -> None: ...
     @overload
     def cat_ranges(
         self,
-        paths: list[TPath],
+        paths: list[_TPath],
         starts: int | list[int],
         ends: int | list[int],
         max_gap: None,
@@ -198,16 +211,17 @@ class AbstractFileSystem(metaclass=_Cached):
     @overload
     def cat_ranges(
         self,
-        paths: list[TPath],
+        paths: list[_TPath],
         starts: int | list[int],
         ends: int | list[int],
         max_gap: None,
         on_error: Literal["return"],
         **kwargs: Any,
     ) -> list[str | bytes | Exception]: ...
+    @overload
     def cat_ranges(
         self,
-        paths: list[TPath],
+        paths: list[_TPath],
         starts: int | list[int],
         ends: int | list[int],
         max_gap: None = None,
@@ -216,23 +230,23 @@ class AbstractFileSystem(metaclass=_Cached):
     ) -> list[str | bytes] | list[str | bytes | Exception]: ...
     def cat(
         self,
-        path: TPath,
+        path: _TPath,
         recursive: bool = False,
         on_error: Literal["raise", "omit", "return"] = "raise",
         **kwargs: Any,
-    ) -> str | bytes | dict[TPath, str | bytes]: ...
+    ) -> str | bytes | dict[_TPath, str | bytes]: ...
     def get_file(
         self,
-        rpath: TPath,
-        lpath: TPath,
+        rpath: _TPath,
+        lpath: _TPath,
         callback: Callback = ...,
         outfile: IO[bytes] | None = None,
         **kwargs: Any,
     ) -> None: ...
     def get(
         self,
-        path1: TPath | list[TPath],
-        path2: TPath | list[TPath],
+        rpath: _TPath | list[_TPath],
+        lpath: _TPath | list[_TPath],
         recursive: bool = False,
         callback: Callback = ...,
         maxdepth: int | None = None,
@@ -240,28 +254,28 @@ class AbstractFileSystem(metaclass=_Cached):
     ) -> None: ...
     def put_file(
         self,
-        lpath: TPath,
-        rpath: TPath,
+        lpath: _TPath,
+        rpath: _TPath,
         callback: Callback = ...,
         mode: Literal["create", "overwrite"] = "overwrite",
         **kwargs: Any,
     ) -> None: ...
     def put(
         self,
-        path1: TPath | list[TPath],
-        path2: TPath | list[TPath],
+        lpath: _TPath | list[_TPath],
+        rpath: _TPath | list[_TPath],
         recursive: bool = False,
         callback: Callback = ...,
         maxdepth: int | None = None,
         **kwargs: Any,
     ) -> None: ...
-    def head(self, path: TPath, size: int = 1024) -> str | bytes: ...
-    def tail(self, path: TPath, size: int = 1024) -> str | bytes: ...
-    def cp_file(self, path1: TPath, path2: TPath, **kwargs: Any) -> None: ...
+    def head(self, path: _TPath, size: int = 1024) -> str | bytes: ...
+    def tail(self, path: _TPath, size: int = 1024) -> str | bytes: ...
+    def cp_file(self, path1: _TPath, path2: _TPath, **kwargs: Any) -> None: ...
     def copy(
         self,
-        path1: TPath | list[TPath],
-        path2: TPath | list[TPath],
+        path1: _TPath | list[_TPath],
+        path2: _TPath | list[_TPath],
         recursive: bool = False,
         maxdepth: int | None = None,
         on_error: Literal["raise", "ignore"] | None = None,
@@ -269,7 +283,7 @@ class AbstractFileSystem(metaclass=_Cached):
     ) -> None: ...
     def expand_path(
         self,
-        path: TPath,
+        path: _TPath,
         recursive: bool = False,
         maxdepth: int | None = None,
         assume_literal: bool = False,
@@ -277,20 +291,20 @@ class AbstractFileSystem(metaclass=_Cached):
     ) -> list[str]: ...
     def mv(
         self,
-        path1: TPath | list[TPath],
-        path2: TPath | list[TPath],
+        path1: _TPath | list[_TPath],
+        path2: _TPath | list[_TPath],
         recursive: bool = False,
         maxdepth: int | None = None,
         **kwargs: Any,
     ) -> None: ...
-    def rm_file(self, path: TPath) -> None: ...
+    def rm_file(self, path: _TPath) -> None: ...
     def rm(
-        self, path: TPath, recursive: bool = False, maxdepth: int | None = None
+        self, path: _TPath, recursive: bool = False, maxdepth: int | None = None
     ) -> None: ...
     @overload
     def open(
         self,
-        path: TPath,
+        path: _TPath,
         mode: OpenTextMode,
         block_size: int | None = None,
         cache_options: dict[str, Any] | None = None,
@@ -300,24 +314,25 @@ class AbstractFileSystem(metaclass=_Cached):
     @overload
     def open(
         self,
-        path: TPath,
+        path: _TPath,
         mode: OpenBinaryMode,
         block_size: int | None = None,
         cache_options: dict[str, Any] | None = None,
         compression: str | None = None,
         **kwargs: Any,
     ) -> AbstractBufferedFile: ...
+    @overload
     def open(
         self,
-        path: TPath,
+        path: _TPath,
         mode: OpenTextMode | OpenBinaryMode = "rb",
         block_size: int | None = None,
         cache_options: dict[str, Any] | None = None,
         compression: str | None = None,
         **kwargs: Any,
     ) -> io.TextIOWrapper | AbstractBufferedFile: ...
-    def touch(self, path: TPath, truncate: bool = True, **kwargs: Any) -> None: ...
-    def ukey(self, path: TPath) -> str: ...
+    def touch(self, path: _TPath, truncate: bool = True, **kwargs: Any) -> None: ...
+    def ukey(self, path: _TPath) -> str: ...
     def read_block(
         self, fn: str, offset: int, length: int | None, delimiter: bytes | None = None
     ) -> bytes: ...
@@ -336,8 +351,8 @@ class AbstractFileSystem(metaclass=_Cached):
     ) -> FSMap: ...
     @classmethod
     def clear_instance_cache(cls) -> None: ...
-    def created(self, path: TPath) -> None: ...
-    def modified(self, path: TPath) -> None: ...
+    def created(self, path: _TPath) -> None: ...
+    def modified(self, path: _TPath) -> None: ...
     def tree(
         self,
         path: str = "/",
@@ -351,66 +366,66 @@ class AbstractFileSystem(metaclass=_Cached):
     ) -> str: ...
     def read_bytes(
         self,
-        path: TPath,
+        path: _TPath,
         start: int | None = None,
         end: int | None = None,
         **kwargs: Any,
     ) -> str | bytes: ...
-    def write_bytes(self, path: TPath, value: bytes, **kwargs: Any) -> None: ...
+    def write_bytes(self, path: _TPath, value: bytes, **kwargs: Any) -> None: ...
     def makedir(
-        self, path: TPath, create_parents: bool = True, **kwargs: Any
+        self, path: _TPath, create_parents: bool = True, **kwargs: Any
     ) -> None: ...
-    def mkdirs(self, path: TPath, exist_ok: bool = False) -> None: ...
+    def mkdirs(self, path: _TPath, exist_ok: bool = False) -> None: ...
     @overload
     def listdir(
-        self, path: TPath, detail: Literal[True], **kwargs: Any
-    ) -> list[FileInfo]: ...
+        self, path: _TPath, detail: Literal[True], **kwargs: Any
+    ) -> list[_FileInfo]: ...
     @overload
     def listdir(
-        self, path: TPath, detail: Literal[False], **kwargs: Any
+        self, path: _TPath, detail: Literal[False], **kwargs: Any
     ) -> list[str]: ...
+    @overload
     def listdir(
-        self, path: TPath, detail: bool = True, **kwargs: Any
-    ) -> list[str] | list[FileInfo]: ...
-    def cp(self, path1: TPath, path2: TPath, **kwargs: Any) -> None: ...
-    def move(self, path1: TPath, path2: TPath, **kwargs: Any) -> None: ...
-    def stat(self, path: TPath, **kwargs: Any) -> FileInfo: ...
+        self, path: _TPath, detail: bool = True, **kwargs: Any
+    ) -> list[str] | list[_FileInfo]: ...
+    def cp(self, path1: _TPath, path2: _TPath, **kwargs: Any) -> None: ...
+    def move(self, path1: _TPath, path2: _TPath, **kwargs: Any) -> None: ...
+    def stat(self, path: _TPath, **kwargs: Any) -> _FileInfo: ...
     @overload
     def disk_usage(
         self,
-        path: TPath,
+        path: _TPath,
         total: Literal[True],
         maxdepth: int | None,
-        withdirs: bool,
         **kwargs: Any,
     ) -> int: ...
     @overload
     def disk_usage(
         self,
-        path: TPath,
+        path: _TPath,
         total: Literal[False],
         maxdepth: int | None,
-        withdirs: bool,
         **kwargs: Any,
     ) -> dict[str, int]: ...
+    @overload
     def disk_usage(
         self,
-        path: TPath,
+        path: _TPath,
         total: bool = True,
         maxdepth: int | None = None,
         **kwargs: Any,
     ) -> int | dict[str, int]: ...
-    def rename(self, path1: TPath, path2: TPath, **kwargs: Any) -> None: ...
+    def rename(self, path1: _TPath, path2: _TPath, **kwargs: Any) -> None: ...
     def delete(
-        self, path: TPath, recursive: bool = False, maxdepth: int | None = None
+        self, path: _TPath, recursive: bool = False, maxdepth: int | None = None
     ) -> None: ...
     def upload(
-        self, lpath: TPath, rpath: TPath, recursive: bool = False, **kwargs: Any
+        self, lpath: _TPath, rpath: _TPath, recursive: bool = False, **kwargs: Any
     ) -> None: ...
     def download(
-        self, rpath: TPath, lpath: TPath, recursive: bool = False, **kwargs: Any
+        self, rpath: _TPath, lpath: _TPath, recursive: bool = False, **kwargs: Any
     ) -> None: ...
-    def sign(self, path: TPath, expiration: int = 100, **kwargs: Any) -> None: ...
+    def sign(self, path: _TPath, expiration: int = 100, **kwargs: Any) -> None: ...
 
 class AbstractBufferedFile(io.IOBase):
     DEFAULT_BLOCK_SIZE: Incomplete
@@ -432,7 +447,7 @@ class AbstractBufferedFile(io.IOBase):
     def __init__(
         self,
         fs,
-        path: TPath,
+        path: _TPath,
         mode: str = "rb",
         block_size: str = "default",
         autocommit: bool = True,
@@ -442,41 +457,58 @@ class AbstractBufferedFile(io.IOBase):
         **kwargs,
     ) -> None: ...
     @property
-    def details(self): ...
+    def details(self) -> _FileInfo: ...
     @details.setter
-    def details(self, value) -> None: ...
+    def details(self, value: _FileInfo) -> None: ...
     @property
-    def full_name(self): ...
+    def full_name(self) -> str: ...
     @property
-    def closed(self): ...
+    @override
+    def closed(self) -> bool: ...
     @closed.setter
-    def closed(self, c) -> None: ...
-    def __hash__(self): ...
-    def __eq__(self, other): ...
+    def closed(self, c: bool) -> None: ...
+    @override
+    def __hash__(self) -> int: ...
+    @override
+    def __eq__(self, other: object) -> bool: ...
     def commit(self) -> None: ...
     def discard(self) -> None: ...
-    def info(self): ...
-    def tell(self): ...
-    def seek(self, loc, whence: int = 0): ...
-    def write(self, data): ...
+    def info(self) -> _FileInfo: ...
+    @override
+    def tell(self) -> int: ...
+    @override
+    def seek(self, loc: int, whence: int = 0) -> int: ...
+    @override
+    def write(self, data: bytes) -> int: ...
+    @override
     def flush(self, force: bool = False) -> None: ...
-    def read(self, length: int = -1): ...
-    def readinto(self, b): ...
-    def readuntil(self, char: bytes = b"\n", blocks=None): ...
+    @override
+    def read(self, length: int = -1) -> bytes: ...
+    def readinto(self, b: ReadableBuffer) -> int: ...
+    def readuntil(self, char: bytes = b"\n", blocks: int | None = None) -> bytes: ...
     def readline(self): ...
-    def __next__(self): ...
-    def __iter__(self): ...
+    @override
+    def __next__(self) -> bytes: ...
+    @override
+    def __iter__(self) -> Self: ...
     def readlines(self): ...
-    def readinto1(self, b): ...
+    def readinto1(self, b: ReadableBuffer) -> int: ...
+    @override
     def close(self) -> None: ...
-    def readable(self): ...
-    def seekable(self): ...
-    def writable(self): ...
+    @override
+    def readable(self) -> bool: ...
+    @override
+    def seekable(self) -> bool: ...
+    @override
+    def writable(self) -> bool: ...
     def __reduce__(self): ...
+    @override
     def __del__(self) -> None: ...
-    def __enter__(self): ...
+    @override
+    def __enter__(self) -> Self: ...
+    @override
     def __exit__(self, *args) -> None: ...
 
 def reopen(
-    fs, path: TPath, mode, blocksize, loc, size, autocommit, cache_type, kwargs
+    fs, path: _TPath, mode, blocksize, loc, size, autocommit, cache_type, kwargs
 ): ...
