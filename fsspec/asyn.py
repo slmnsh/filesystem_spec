@@ -528,8 +528,11 @@ class AsyncFileSystem(AbstractFileSystem):
         starts, ends: int or list
             Bytes limits of the read. If using a single int, the same value will be
             used to read all the specified files.
+        on_error: "return" or "raise"
+            If "return" (default), any per-range exception is placed in the output
+            list at the corresponding position. Otherwise the first such exception
+            is raised. Matches ``AbstractFileSystem.cat_ranges``.
         """
-        # TODO: on_error
         if max_gap is not None:
             # use utils.merge_offset_ranges
             raise NotImplementedError
@@ -546,9 +549,14 @@ class AsyncFileSystem(AbstractFileSystem):
             for p, s, e in zip(paths, starts, ends)
         ]
         batch_size = batch_size or self.batch_size
-        return await _run_coros_in_chunks(
+        out = await _run_coros_in_chunks(
             coros, batch_size=batch_size, nofiles=True, return_exceptions=True
         )
+        if on_error != "return":
+            ex = next(filter(is_exception, out), None)
+            if ex is not None:
+                raise ex
+        return out
 
     async def _put_file(self, lpath, rpath, mode="overwrite", **kwargs):
         raise NotImplementedError
@@ -737,7 +745,7 @@ class AsyncFileSystem(AbstractFileSystem):
     async def _ls(self, path, detail=True, **kwargs):
         raise NotImplementedError
 
-    async def _walk(self, path, maxdepth=None, on_error="omit", **kwargs):
+    async def _walk(self, path, maxdepth=None, topdown=True, on_error="omit", **kwargs):
         if maxdepth is not None and maxdepth < 1:
             raise ValueError("maxdepth must be at least 1")
 
@@ -775,21 +783,34 @@ class AsyncFileSystem(AbstractFileSystem):
             else:
                 files[name] = info
 
-        if detail:
+        if not detail:
+            dirs = list(dirs)
+            files = list(files)
+
+        if topdown:
+            # Yield before recursion if walking top down
             yield path, dirs, files
-        else:
-            yield path, list(dirs), list(files)
 
         if maxdepth is not None:
             maxdepth -= 1
             if maxdepth < 1:
+                if not topdown:
+                    yield path, dirs, files
                 return
 
         for d in dirs:
             async for _ in self._walk(
-                full_dirs[d], maxdepth=maxdepth, detail=detail, **kwargs
+                full_dirs[d],
+                maxdepth=maxdepth,
+                detail=detail,
+                topdown=topdown,
+                **kwargs,
             ):
                 yield _
+
+        if not topdown:
+            # Yield after recursion if walking bottom up
+            yield path, dirs, files
 
     async def _glob(self, path, maxdepth=None, **kwargs):
         if maxdepth is not None and maxdepth < 1:

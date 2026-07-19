@@ -874,7 +874,7 @@ class AbstractFileSystem(metaclass=_Cached):
         out = []
         for p, s, e in zip(paths, starts, ends):
             try:
-                out.append(self.cat_file(p, s, e))
+                out.append(self.cat_file(p, s, e, **kwargs))
             except Exception as e:
                 if on_error == "return":
                     out.append(e)
@@ -2082,7 +2082,7 @@ class AbstractBufferedFile(io.IOBase):
             self.offset = 0
             try:
                 self._initiate_upload()
-            except:
+            except Exception:
                 self.closed = True
                 raise
 
@@ -2222,7 +2222,7 @@ class AbstractBufferedFile(io.IOBase):
             if self.mode == "rb":
                 self.cache = None
             else:
-                if not self.forced:
+                if not getattr(self, "forced", True):
                     self.flush(force=True)
 
                 if self.fs is not None:
